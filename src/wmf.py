@@ -19,13 +19,14 @@ class WeightedMatrixFactorization():
     self.n_latents = n_latents # number of latent factors
     self.w_obs = w_obs # weight of observed 
     self.w_unobs = w_unobs # weight of unobserved 
-    self.lambda_reg = lambda_reg
+    self.lambda_reg = lambda_reg  # regularization parameter
     
     if seed is not None: 
-      np.random.seed(seed)
+      np.random.seed(seed)  # set the seed for reproducibility
 
-    self.user_matrix = np.random.rand(self.n_users, n_latents)  # fill with random values
-    self.item_matrix = np.random.rand(self.n_items, n_latents)  # fill with random values
+    # initialize the user and item matrices with random values
+    self.user_matrix = np.random.rand(self.n_users, n_latents)  
+    self.item_matrix = np.random.rand(self.n_items, n_latents)  
 
   def fit(self, method:str='WALS', verbose:str=False) -> dict:
 
@@ -39,12 +40,14 @@ class WeightedMatrixFactorization():
   
   def __wals_method(self, verbose) -> dict:
     
-    history = {} # dictionary to store the loss function values
+    history = {} # to store the loss function values
+
     for _ in range(self.n_iter):
+
       self.__update_user_matrix()
       self.__update_item_matrix()
 
-      # loss function:
+      # calculate the loss function value
       loss = np.sum(
         np.where(
             self.observed_data,
@@ -52,11 +55,11 @@ class WeightedMatrixFactorization():
             0
         )
       )
-      if verbose:
-        # print the loss with only 3 decimals:
-        print(f"Loss: {loss:.3f}, iteration: {_+1}/{self.n_iter}")
 
-      history[_] = loss
+      history[_] = loss # store the loss function value
+
+      if verbose:
+        print(f"Loss: {loss:.3f}, iteration: {_+1}/{self.n_iter}")
 
     return history
 
@@ -89,6 +92,7 @@ class WeightedMatrixFactorization():
     for item_idx in range(self.n_items):
 
       # Weight matrix for observed and unobserved values
+      # TODO: refactor this code, divide by zero warning...
       weight_matrix = np.diag(
           np.where(
               self.observed_data[:,item_idx],
