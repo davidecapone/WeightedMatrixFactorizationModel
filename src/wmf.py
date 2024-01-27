@@ -12,7 +12,7 @@ class WeightedMatrixFactorization():
                lambda_reg:float=0.05) -> None:
     
     self.feedback_matrix = np.nan_to_num(np.array(feedback_matrix), 0) # Replace NaN values with 0
-    self.observed_data = ~np.isnan(feedback_matrix) # Create a boolean matrix where True values are observed ratings, False values are unobserved ratings
+    self.observed_data = ~np.isnan(feedback_matrix) # True values are observed ratings, False values are unobserved ratings
     
     self.n_users, self.n_items = feedback_matrix.shape # number of users and items
     self.n_iter = n_iter # number of iterations
@@ -39,7 +39,9 @@ class WeightedMatrixFactorization():
     return hist
   
   def __wals_method(self, verbose) -> dict:
-    
+    """
+    Perform 
+    """
     history = {} # to store the loss function values
 
     for _ in range(self.n_iter):
@@ -64,30 +66,37 @@ class WeightedMatrixFactorization():
     return history
 
   def __update_user_matrix(self) -> None:
-    
+    """
+    Update the user matrix
+    """
+
     for user_idx in range(self.n_users):
+      # iterate over the users
 
       # Weight matrix for observed and unobserved values
       weight_matrix = np.diag(
-          np.where(
+          np.where( 
               self.observed_data[user_idx, :],
               self.w_obs / sum(self.observed_data[user_idx, :]), # Normalize the weight for observed ratings
               self.w_unobs / sum(~self.observed_data[user_idx, :]) # Normalize the weight for unobserved ratings
           )
       )
 
-      # Regularization term
+
+      # lambda_reg*np.eye(self.n_latents) is a diagonal matrix with lambda_reg in the diagonal and 0 elsewhere.
       regularization = self.lambda_reg * np.eye(self.n_latents)
       
       # Solve the system of linear equations
-      self.user_matrix[user_idx,:] = solve(
-          self.item_matrix.T @ weight_matrix @ self.item_matrix + regularization,
-          self.item_matrix.T @ weight_matrix @ self.feedback_matrix[user_idx, :]
+      self.user_matrix[user_idx,:] = np.linalg.solve(
+        self.item_matrix.T @ weight_matrix @ self.item_matrix + regularization, # n_latents x n_latents
+        self.item_matrix.T @ weight_matrix @ self.feedback_matrix[user_idx, :] # n_latents x 1
       )
-  
     return
   
   def __update_item_matrix(self) -> None:
+    """
+    Update the item matrix
+    """
 
     for item_idx in range(self.n_items):
 
@@ -105,8 +114,10 @@ class WeightedMatrixFactorization():
       regularization = self.lambda_reg * np.eye(self.n_latents)
 
       # Solve the system of linear equations using spsolve
-      self.item_matrix[item_idx, :] = solve(self.user_matrix.T @ weight_matrix @ self.user_matrix + regularization,
-                                          self.user_matrix.T @ weight_matrix @ self.feedback_matrix[:, item_idx])
+      self.item_matrix[item_idx, :] = solve(
+        self.user_matrix.T @ weight_matrix @ self.user_matrix + regularization,
+        self.user_matrix.T @ weight_matrix @ self.feedback_matrix[:, item_idx]
+      )
     return
   
   def get_users_embedding(self) -> np.array:
