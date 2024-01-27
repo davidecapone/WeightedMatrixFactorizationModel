@@ -55,6 +55,7 @@ class WeightedMatrixFactorization():
       if verbose:
         # print the loss with only 3 decimals:
         print(f"Loss: {loss:.3f}, iteration: {_+1}/{self.n_iter}")
+
       history[_] = loss
 
     return history
