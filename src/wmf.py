@@ -120,9 +120,9 @@ class WeightedMatrixFactorization():
       )
     return
   
-  def get_users_embedding(self) -> np.array:
-    return self.user_matrix
-  
-  def get_items_embedding(self) -> np.array:
-    return self.item_matrix
+  def get_embeddings(self) -> tuple:
+    """
+    Return the user and item embeddings
+    """
+    return self.user_matrix, self.item_matrix
   
