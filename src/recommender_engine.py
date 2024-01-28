@@ -1,4 +1,4 @@
-from src.wmf import WeightedMatrixFactorization
+from src.wmfact import WeightedMatrixFactorization
 import numpy as np
 
 class RecommenderEngine:
