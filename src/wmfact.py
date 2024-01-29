@@ -40,8 +40,8 @@ class WeightedMatrixFactorization():
 
     if verbose:
       self.verbose = True
-
-    print(f"** fitting the model with {method} method **")
+      print(f"** fitting the model with {method} method **")
+    
     start = time.process_time()   # start timer
     hist = {}                     # dict. for loss function values
 
@@ -55,7 +55,10 @@ class WeightedMatrixFactorization():
         raise NotImplementedError(f"Method {method} not implemented.")
       
     end = time.process_time()                       # end timer
-    print(f"** done in {end-start:.2f} seconds **") # print elapsed time
+
+    if self.verbose:
+      print(f"** done in {end-start:.2f} seconds **") # print elapsed time
+
     return hist
   
   def __sgd_method(self, verbose) -> None:
@@ -86,7 +89,7 @@ class WeightedMatrixFactorization():
 
       history[i] = loss # store loss function value at iteration i
       if self.verbose:
-        print(f"Loss: {loss:.3f}, iteration: {i+1}/{self.n_iter}")
+        print(f"[{i+1}/{self.n_iter}] loss: {loss:.2f}")
 
     return history
 
@@ -157,11 +160,8 @@ class WeightedMatrixFactorization():
     """
     return self.users_embedding @ self.items_embedding.T
   
-  def save(self, path:str) -> None:
+  def get_embeddings(self) -> tuple:
     """
-    Save the model
+    Return the user and item embeddings
     """
-
-    with open(path, 'wb') as f:
-      pickle.dump(self, f)
-    return
+    return self.users_embedding, self.items_embedding
