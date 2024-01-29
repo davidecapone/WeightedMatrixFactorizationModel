@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 from numpy.linalg import solve
 import time
@@ -40,7 +41,7 @@ class WeightedMatrixFactorization():
 
     if verbose:
       self.verbose = True
-      print(f"** fitting the model with {method} method **")
+      print(f"** fitting the model with {method} method, latents = {self.n_latents}, lambda = {self.lambda_reg}, n_iter = {self.n_iter} **")
     
     start = time.process_time()   # start timer
     hist = {}                     # dict. for loss function values
@@ -148,6 +149,32 @@ class WeightedMatrixFactorization():
       )
     return
   
+  def grid_search(self, params:dict) -> tuple:
+    """
+    Perform grid search for the parameters
+    """
+
+    best_params = None
+    best_score = np.inf
+
+    param_combinations = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
+
+    for params in param_combinations:
+      self.n_latents = params['n_latents']
+      self.n_iter = params['n_iter']
+      #self.w_obs = params['w_obs']
+      #self.w_unobs = params['w_unobs']
+      self.lambda_reg = params['lambda_reg']
+
+      hist = self.fit(method='wals', verbose=True)
+      score = hist[self.n_iter-1]
+
+      if score < best_score:
+        best_score = score
+        best_params = params
+
+    return best_params, best_score
+
   def predict(self, user_idx:int, item_idx:int) -> float:
     """
     Predict the rating for a given user and item
