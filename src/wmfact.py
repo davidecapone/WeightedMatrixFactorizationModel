@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.linalg import solve
 import time
-import pickle
+from concurrent.futures import ThreadPoolExecutor
 
 class WeightedMatrixFactorization():
 
@@ -70,9 +70,10 @@ class WeightedMatrixFactorization():
 
     for i in range(self.n_iter):
 
-      # UPDATE USER AND ITEM EMBEDDINGS:
-      self.__update_users_embedding()
-      self.__update_items_embedding()
+      # parallelize the update of the user and item matrices:
+      with ThreadPoolExecutor() as executor:
+        executor.submit(self.__update_users_embedding)
+        executor.submit(self.__update_items_embedding)
 
       # LOSS FUNCTION: 
       loss = np.sum(
