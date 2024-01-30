@@ -1,5 +1,7 @@
 # IRProject
-This is the repository for the Information Retrieval's project (University of Trieste, Data Science & Scientif Computing Master Degree)
+This is the repository for the Information Retrieval's project (University of Trieste, Data Science & Scientif Computing Master Degree).
+
+The dataset provided here has been utilized in the Netflix Prize, an open competition organized by Netflix to identify the best algorithm for predicting user ratings on films. The grand prize of $1,000,000 was awarded to the BellKor's Pragmatic Chaos team, which emerged as the winner.
 
 ## Recommender systems
 
@@ -15,3 +17,6 @@ Let's assume to have m users and n items. The goal of our recommendation system 
 | user1 |1|?|3|?|
 | user2 |1|4|?|?|
 | user3 |?|?|3|1|
+
+## References
+- Netflix Movie Ratings 
