@@ -15,43 +15,46 @@ import numpy as np
 from numpy.linalg import solve
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
+import pickle
+import itertools
 
 class WeightedMatrixFactorization():
 
   def __init__(self, feedbacks:np.ndarray, 
-               seed:int=None,
                n_latents:int=100, 
                n_iter:int=20, 
                w_obs:float=1.0, 
                w_unobs:float=0.1,
                lambda_reg:float=0.05) -> None:
     
-    # feedbacks: matrix of ratings (n_users x n_items)
-    self.feedbacks = np.nan_to_num( np.array(feedbacks), 0 ) # all NaNs are replaced by 0
+    # all NaNs in the feedback matrix are replaced with 0:
+    self.feedbacks = np.nan_to_num( np.array(feedbacks), 0 ) 
 
-    # observed_data: boolean matrix of observed ratings (n_users x n_items)
-    self.observed_data = ~np.isnan( feedbacks ) # True=observed ratings, False=unobserved ratings
+    # boolean matrix of observed ratings (shape: same as feedbacks matrix, True=observed ratings, False=unobserved ratings):
+    self.observed_data = ~np.isnan( feedbacks )
     
     # getting the number of users and items:
     self.n_users, self.n_items = feedbacks.shape
 
-    # hyperparameters:
-    self.n_iter = n_iter  # number of iterations
-    self.n_latents = n_latents # number of latent factors
-    self.lambda_reg = lambda_reg # regularization parameter
-    self.w_obs = w_obs # weight of observed 
-    self.w_unobs = w_unobs # weight of unobserved
-    
-    if seed is not None: # set the seed for reproducibility?
-      np.random.seed(seed)
+    # Hyperparameters:
+    self.n_iter = n_iter          # number of iterations for the algorithm
+    self.n_latents = n_latents    # number of latent factors
+    self.lambda_reg = lambda_reg  # regularization parameter
+    self.w_obs = w_obs            # weight of observed 
+    self.w_unobs = w_unobs        # weight of unobserved
 
-  def fit(self, method:str='wals') -> dict:
+    # user and item embeddings:
+    self.users_embedding = None
+    self.items_embedding = None
+
+  def fit(self, method:str='wals', seed:int=None) -> dict:
     """
     Fits the model using the specified method and returns a dictionary containing
     the history of loss function values during training.
 
     Parameters:
-    - method (str): The method to use for fitting the model. Currently supported methods are 'WALS' and 'SGD'.
+    - method (str): The method to use for fitting the model. Currently supported method is 'wals'.
+    - seed (int): An optional seed value to set for reproducibility.
 
     Returns:
     - hist (dict): A dictionary containing the history of loss function values during training.
@@ -66,8 +69,9 @@ class WeightedMatrixFactorization():
     """
 
     # random initialization of user and item embeddings:
-    self.users_embedding = np.random.rand(self.n_users, self.n_latents)
-    self.items_embedding = np.random.rand(self.n_items, self.n_latents)
+    np.random.seed(seed) if seed is not None else None
+    self.users_embedding = np.random.rand(self.n_users, self.n_latents) # shape: (n_users x n_latents)
+    self.items_embedding = np.random.rand(self.n_items, self.n_latents) # shape: (n_items x n_latents)
 
     print(f"* Fitting the model with {method} method: n_iter = {self.n_iter}, n_latents = {self.n_latents}, lambda_reg = {self.lambda_reg} *")
 
@@ -196,6 +200,19 @@ class WeightedMatrixFactorization():
       '''
     return
   
+  def get_embeddings(self) -> tuple:
+    """
+    Return the user and item embeddings as a tuple.
+
+    Returns:
+    - embeddings (tuple): A tuple containing the user embeddings and item embeddings.
+
+    Usage:
+    >>> user_emb, item_emb = model.get_embeddings()
+    """
+    return self.users_embedding, self.items_embedding
+
+  @staticmethod
   def compute_rmse(feedback_matrix, predicted_matrix):
     """
     Compute the Root Mean Squared Error (RMSE) between the predicted ratings and the actual ratings.
@@ -225,23 +242,65 @@ class WeightedMatrixFactorization():
     >>> predicted_ratings = model.predict()
     """
     return self.users_embedding @ self.items_embedding.T
-  
-  def get_embeddings(self) -> tuple:
+
+  def save(self, filename:str) -> None:
     """
-    Return the user and item embeddings as a tuple.
+    Save the model to a file using pickle.
+
+    Parameters:
+    - filename (str): The name of the file to save the model to.
 
     Returns:
-    - embeddings (tuple): A tuple containing the user embeddings and item embeddings.
+    - None
 
     Usage:
-    >>> user_emb, item_emb = model.get_embeddings()
+    >>> model.save('model.pkl')
     """
-    return self.users_embedding, self.items_embedding
-  
+    with open(filename, 'wb') as file:
+      pickle.dump(self, file)
 
-  """def grid_search(self, params:dict) -> tuple:
+  @staticmethod
+  def load(filename:str):
+    """
+    Load a model from a file using pickle.
+
+    Parameters:
+    - filename (str): The name of the file to load the model from.
+
+    Returns:
+    - model (WeightedMatrixFactorization): The loaded model.
+
+    Usage:
+    >>> model = WeightedMatrixFactorization.load('model.pkl')
+    """
+    with open(filename, 'rb') as file:
+      model = pickle.load(file)
+    return model
+
+  def train_test_split(matrix, test_percentage=0.1, random_state=None):
     
-    Perform grid search for the parameters
+    np.random.seed(random_state) if random_state is not None else None
+
+    n_non_nan = np.count_nonzero(~np.isnan(matrix))  # get the number of non nan values
+    n_test = int(n_non_nan * test_percentage) # number of non nan values that should be in the test set
+    
+    mask = np.zeros_like(matrix, dtype=bool)  # same shape as feedbacks matrix
+    non_nan_indices = np.argwhere(~np.isnan(matrix))  # getting the indexes of the non nan values
+    np.random.shuffle(non_nan_indices)  # shuffle them
+
+    test_indices = non_nan_indices[:n_test]
+    train_indices = non_nan_indices[n_test:]
+
+    mask[tuple(test_indices.T)] = True
+
+    train = matrix.copy()
+    test = matrix.copy()
+
+    train[mask] = np.nan
+    test[~mask] = np.nan
+    return train, test
+  
+  def grid_search(self, params:dict) -> tuple:
     
     best_params = None
     best_score = np.inf
@@ -256,6 +315,13 @@ class WeightedMatrixFactorization():
       self.lambda_reg = params['lambda_reg']
 
       hist = self.fit(method='wals', verbose=True)
+
+      usr, item = self.get_embeddings()
+      predicted_ratings = usr @ item.T
+      
+      # now compute the rmse on the test set
+      rmse = self.compute_rmse(self.feedbacks, predicted_ratings)
+
       score = hist[self.n_iter-1]
 
       if score < best_score:
@@ -263,5 +329,3 @@ class WeightedMatrixFactorization():
         best_params = params
 
     return best_params, best_score
-    
-    pass"""
