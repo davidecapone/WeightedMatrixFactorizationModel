@@ -1,2 +1,0 @@
-n_latents,n_iter,lambda_reg,w_obs,w_unobs
-100,20,0.05,1.0,0.1
