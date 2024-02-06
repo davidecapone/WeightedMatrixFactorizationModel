@@ -11,12 +11,17 @@ Usage:
 >>> user_emb, item_emb = model.get_embeddings()
 >>> predicted_ratings = model.predict()
 """
+
 import numpy as np
 from numpy.linalg import solve
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 import pickle
-import itertools
+import json
+from datetime import datetime
+import dill
+
+MODELS_PATH = 'models/'
 
 class WeightedMatrixFactorization():
 
@@ -49,8 +54,8 @@ class WeightedMatrixFactorization():
 
   def fit(self, method:str='wals', seed:int=None) -> dict:
     """
-    Fits the model using the specified method and returns a dictionary containing
-    the history of loss function values during training.
+    Fit the model using the specified method and return a dictionary containing the history of loss function values
+    during training. The model and its history are saved to disk.
 
     Parameters:
     - method (str): The method to use for fitting the model. Currently supported method is 'wals'.
@@ -81,7 +86,19 @@ class WeightedMatrixFactorization():
         hist = self.__wals_method() 
       case _:
         raise NotImplementedError(f"Method {method} not implemented.")
-      
+    
+    # dump the model to disk:
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    filename = f"wmf_{method}_{timestamp}.pkl"
+    self.__save(MODELS_PATH + filename)
+    print(f"\n-> Model saved to {MODELS_PATH + filename}")
+
+    # dump the history to disk:
+    with open(MODELS_PATH + filename.replace('.pkl', '.json'), 'w') as file:
+      json.dump(hist, file)
+    #hist.to_csv(MODELS_PATH + filename.replace('.pkl', '.csv'), index=False)
+    print(f"-> History saved to {MODELS_PATH + filename.replace('.pkl', '.csv')}\n")
+
     return hist
   
   def __wals_method(self) -> dict:
@@ -212,25 +229,7 @@ class WeightedMatrixFactorization():
     """
     return self.users_embedding, self.items_embedding
 
-  @staticmethod
-  def compute_rmse(feedback_matrix, predicted_matrix):
-    """
-    Compute the Root Mean Squared Error (RMSE) between the predicted ratings and the actual ratings.
-
-    Parameters:
-    - feedback_matrix (numpy.ndarray): The actual ratings matrix with NaN values for non-ratings.
-    - predicted_matrix (numpy.ndarray): The predicted ratings matrix.
-
-    Returns:
-    - rmse (float): The Root Mean Squared Error (RMSE) between the predicted and actual ratings.
-    """
-    
-    mask = ~np.isnan(feedback_matrix) # boolean matrix, True=observed ratings, False=unobserved ratings (NaNs)
-    squared_error = (predicted_matrix[mask] - feedback_matrix[mask]) ** 2 # squared error
-    rmse = np.sqrt( np.mean(squared_error) )  # RMSE
-    return rmse
-
-  def predict(self):
+  def predict_all(self):
     """
     Predicts ratings for user-item pairs based on the learned embeddings.
 
@@ -243,7 +242,7 @@ class WeightedMatrixFactorization():
     """
     return self.users_embedding @ self.items_embedding.T
 
-  def save(self, filename:str) -> None:
+  def __save(self, filename:str) -> None:
     """
     Save the model to a file using pickle.
 
@@ -256,8 +255,18 @@ class WeightedMatrixFactorization():
     Usage:
     >>> model.save('model.pkl')
     """
+
+    # seroaize the model using dill:
     with open(filename, 'wb') as file:
-      pickle.dump(self, file)
+      dill.dump(self, file)
+
+    """"
+    try:
+      with open(filename, 'wb') as file:
+        pickle.dump(self, file, pickle.HIGHEST_PROTOCOL)
+    except Exception as e:
+      print(f"!! Error saving the model: {e} !!")
+    """
 
   @staticmethod
   def load(filename:str):
@@ -277,55 +286,3 @@ class WeightedMatrixFactorization():
       model = pickle.load(file)
     return model
 
-  def train_test_split(matrix, test_percentage=0.1, random_state=None):
-    
-    np.random.seed(random_state) if random_state is not None else None
-
-    n_non_nan = np.count_nonzero(~np.isnan(matrix))  # get the number of non nan values
-    n_test = int(n_non_nan * test_percentage) # number of non nan values that should be in the test set
-    
-    mask = np.zeros_like(matrix, dtype=bool)  # same shape as feedbacks matrix
-    non_nan_indices = np.argwhere(~np.isnan(matrix))  # getting the indexes of the non nan values
-    np.random.shuffle(non_nan_indices)  # shuffle them
-
-    test_indices = non_nan_indices[:n_test]
-    train_indices = non_nan_indices[n_test:]
-
-    mask[tuple(test_indices.T)] = True
-
-    train = matrix.copy()
-    test = matrix.copy()
-
-    train[mask] = np.nan
-    test[~mask] = np.nan
-    return train, test
-  
-  def grid_search(self, params:dict) -> tuple:
-    
-    best_params = None
-    best_score = np.inf
-
-    param_combinations = [dict(zip(params.keys(), values)) for values in itertools.product(*params.values())]
-
-    for params in param_combinations:
-      self.n_latents = params['n_latents']
-      self.n_iter = params['n_iter']
-      #self.w_obs = params['w_obs']
-      #self.w_unobs = params['w_unobs']
-      self.lambda_reg = params['lambda_reg']
-
-      hist = self.fit(method='wals', verbose=True)
-
-      usr, item = self.get_embeddings()
-      predicted_ratings = usr @ item.T
-      
-      # now compute the rmse on the test set
-      rmse = self.compute_rmse(self.feedbacks, predicted_ratings)
-
-      score = hist[self.n_iter-1]
-
-      if score < best_score:
-        best_score = score
-        best_params = params
-
-    return best_params, best_score
