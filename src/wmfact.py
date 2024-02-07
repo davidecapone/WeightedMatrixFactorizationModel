@@ -52,7 +52,7 @@ class WeightedMatrixFactorization():
     self.users_embedding = None
     self.items_embedding = None
 
-  def fit(self, method:str='wals', seed:int=None) -> dict:
+  def fit(self, method:str='wals', seed:int=None, dump:bool=True) -> dict:
     """
     Fit the model using the specified method and return a dictionary containing the history of loss function values
     during training. The model and its history are saved to disk.
@@ -60,6 +60,7 @@ class WeightedMatrixFactorization():
     Parameters:
     - method (str): The method to use for fitting the model. Currently supported method is 'wals'.
     - seed (int): An optional seed value to set for reproducibility.
+    - dump (bool): A flag to indicate whether to save the model and its history to disk. Default is True.
 
     Returns:
     - hist (dict): A dictionary containing the history of loss function values during training.
@@ -86,18 +87,24 @@ class WeightedMatrixFactorization():
         hist = self.__wals_method() 
       case _:
         raise NotImplementedError(f"Method {method} not implemented.")
-    
-    # dump the model to disk:
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    filename = f"wmf_{method}_{timestamp}.pkl"
-    self.__save(MODELS_PATH + filename)
-    print(f"\n-> Model saved to {MODELS_PATH + filename}")
 
-    # dump the history to disk:
-    with open(MODELS_PATH + filename.replace('.pkl', '.json'), 'w') as file:
-      json.dump(hist, file)
-    #hist.to_csv(MODELS_PATH + filename.replace('.pkl', '.csv'), index=False)
-    print(f"-> History saved to {MODELS_PATH + filename.replace('.pkl', '.csv')}\n")
+    if dump:
+      # dump the model to disk:
+      timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+
+      # save the filename with method and params used:
+      filename = f"wmf_{method}_nlat{self.n_latents}_niter{self.n_iter}_lambdareg{self.lambda_reg}_{timestamp}.pkl"
+
+      #filename = f"wmf_{method}_{timestamp}.pkl"
+      self.__save(MODELS_PATH + filename)
+      print(f"\n-> Model saved to {MODELS_PATH + filename}")
+
+      # dump the history to disk:
+      with open(MODELS_PATH + filename.replace('.pkl', '.json'), 'w') as file:
+        json.dump(hist, file)
+      #hist.to_csv(MODELS_PATH + filename.replace('.pkl', '.csv'), index=False)
+      print(f"-> History saved to {MODELS_PATH + filename.replace('.pkl', '.csv')}\n")
+    
 
     return hist
   
@@ -241,6 +248,47 @@ class WeightedMatrixFactorization():
     >>> predicted_ratings = model.predict()
     """
     return self.users_embedding @ self.items_embedding.T
+
+  def grid_search(self, params:dict, method:str='wals', seed:int=None, dump:bool=True) -> tuple:
+    """
+    Perform grid search over the specified hyperparameters and return the best combination of hyperparameters
+    and the corresponding history of loss function values during training.
+
+    Parameters:
+    - params (dict): A dictionary containing the hyperparameters to search over.
+    - method (str): The method to use for fitting the model. Currently supported method is 'wals'.
+    - seed (int): An optional seed value to set for reproducibility.
+    - dump (bool): A flag to indicate whether to save the model and its history to disk. Default is True.
+
+    Returns:
+    - best_params (dict): The best combination of hyperparameters.
+    - best_hist (dict): A dictionary containing the history of loss function values for the best combination of hyperparameters.
+
+    Usage:
+    >>> best_params, best_hist = model.grid_search(params={'n_latents':[50, 100, 150], 'n_iter':[10, 20, 30], 'lambda_reg':[0.01, 0.05, 0.1]})
+    """
+
+    best_params = None
+    best_hist = None
+    best_loss = np.inf
+
+    for n_latents in params['n_latents']:
+      for n_iter in params['n_iter']:
+        for lambda_reg in params['lambda_reg']:
+
+          self.n_latents = n_latents
+          self.n_iter = n_iter
+          self.lambda_reg = lambda_reg
+
+          hist = self.fit(method=method, seed=seed, dump=dump)
+          loss = hist[self.n_iter-1]  # get the loss value at the last iteration
+
+          if loss < best_loss:
+            best_loss = loss
+            best_params = {'n_latents':n_latents, 'n_iter':n_iter, 'lambda_reg':lambda_reg}
+            best_hist = hist
+
+    return best_params, best_hist
 
   def __save(self, filename:str) -> None:
     """
