@@ -142,6 +142,38 @@ class WeightedMatrixFactorization():
 
     return history
 
+  def __sgd_method(self):
+    """
+    Perform Stochastic Gradient Descent (SGD) algorithm.
+
+    This method updates the user and item embeddings iteratively using stochastic gradient descent.
+
+    Returns:
+    - history (dict): A dictionary containing the history of loss function values for each iteration.
+    """
+    history = {}
+
+    for epoch in range(self.n_iter):  # iterate over the number of epochs
+      total_loss = 0
+
+      for i in range(self.n_users):
+        for j in range(self.n_items):
+          if self.feedbacks[i, j] > 0:  # check if rating is observed
+            error = self.feedbacks[i, j] - np.dot(self.users_embedding[i, :], self.items_embedding[j, :].T)
+            total_loss += error ** 2  # compute total loss
+
+            # Update user and item embeddings using stochastic gradient descent
+            user_gradient = -2 * error * self.items_embedding[j, :] + 2 * self.lambda_reg * self.users_embedding[i, :]
+            item_gradient = -2 * error * self.users_embedding[i, :] + 2 * self.lambda_reg * self.items_embedding[j, :]
+
+            self.users_embedding[i, :] -= self.learning_rate * user_gradient
+            self.items_embedding[j, :] -= self.learning_rate * item_gradient
+
+      # Save total loss for current epoch in history
+      history[epoch] = total_loss
+
+    return history
+  
   def __update_users_embedding(self) -> None:
     """
     Update the user matrix based on the observed data, weights, and regularization.

@@ -1,35 +1,37 @@
-# Netlix Recommender System
-*This repository contains the final project for the course of Information Retrival, University of Trieste (master degree in Data Science & Scientific Computing).* 
+# Recommender System
 
-## About the dataset
-The dataset provided here has been utilized in the Netflix Prize, an open competition organized by Netflix to identify the best algorithm for predicting user ratings on films. The grand prize of $1,000,000 was awarded to the BellKor's Pragmatic Chaos team, which emerged as the winner.
+## About data
+The MovieLens dataset is a widely used benchmark dataset for recommendation systems research and evaluation. It contains user-item ratings collected from the MovieLens website, where users rate movies on a scale of 1 to 5.
+
+For this project, it has been decided to use the MovieLens 100k: the smallest version of the dataset containing 100000 ratings. This version is commonly used for initial experimentation and prototyping due to its smaller size and faster processing capabilities.
 
 ## Recommender systems
-
-There are two types of Recommender systems:
-- **Content-Based**: these systems try to match users with items based on items content and users profiles.
-- **Collaborative filtering**: they rely on the assumption that similar users like similar items. Similarity measures between users and/or items are used to make recommendations.
+Recommender systems can be broadly categorized into two types:
+- **Content-Based**: these systems aim to recommend items to users by analyzing the content of the items and users' profiles. They match users with items based on similarities in item content and user preferences.
+- **Collaborative filtering**: this approach relies on the principle that users who have similar preferences in the past are likely to have similar preferences in the future. Collaborative filtering algorithms recommend items to users based on the preferences of similar users. 
 
 ## Matrix factorization
-Let's assume to have m users and n items. The goal of our recommendation system is to build a $m \times n$ matrix (also called feedback matrix) in which we have a rating for each user-item pair. Since we only have a limited number of ratings, this matrix is very sparse.
+Let's consider a scenario with m users and items. Our objective with the recommendation system is to construct an m×n matrix, commonly known as the feedback matrix. This matrix represents ratings for each user-item pair. Note that, due to the limited number of available ratings, this matrix is very sparse.
 
-|       |movie1|movie2|movie3|movie4|
-|-------|:------:|:------:|:------:|:------:|
-| user1 |1|?|3|?|
-| user2 |1|4|?|?|
-| user3 |?|?|3|1|
+Here's an example of a feedback matrix for a recommendation system with 3 users and 4 items (movies), where missing ratings are represented by '?' symbols:
 
-This is an example of feedback matrix in which we have 3 users and 4 items (movies). The couples user-item with no rating are labelled with '?'.
-The task for the algorithm is to infer those values actually.
+         | Item 1 | Item 2 | Item 3 | Item 4 |
+----------------------------------------------
+User 1   |   5    |   ?    |   4    |   3    |
+User 2   |   ?    |   2    |   ?    |   ?    |
+User 3   |   4    |   3    |   ?    |   5    |
+
+
+The goal of the algorithm is to predict or infer the missing ratings for each user-item pair marked with '?'.
 
 $$
 \min_{p,q}{\sum_{(i,j) \in obs}{(A_{ij}-U_i\dot{V_j^{T}})^2+\lambda(||U_i||^2+||V_j||^2)}}
 $$
 where $obs$ is the set of $(i,j)$ pairs which are known (the observed ratings). In order to avoid overfitting we use the $\lambda$ for regularize the parameters.
 
-For solving this minimization task we can use:
-- Stochastic Gradient Descent (SGD)
-- Weighted Alternated Least Square (WALS). 
+To solve this minimization task, two common optimization algorithms are suggested:
+- Stochastic Gradient Descent (SGD): A popular optimization algorithm that iteratively updates the parameters (user and item vectors) in the direction of the negative gradient of the objective function.
+- Weighted Alternating Least Squares (WALS): An optimization algorithm that alternates between updating the user and item matrices while keeping the other fixed. This method can also be parallelized as updates for different users/items can be performed independently.
 
 
 ## References
