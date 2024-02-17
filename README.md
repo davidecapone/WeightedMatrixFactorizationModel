@@ -35,4 +35,4 @@ To solve this minimization task, two common optimization algorithms are suggeste
 
 
 ## References
-- Download the dataset: Netflix Movie Ratings ([Kaggle](https://www.kaggle.com/datasets/evanschreiner/netflix-movie-ratings?resource=download)).
+- dw

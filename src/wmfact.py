@@ -20,6 +20,7 @@ import pickle
 import json
 from datetime import datetime
 import dill
+import time
 
 MODELS_PATH = 'models/'
 
@@ -29,7 +30,7 @@ class WeightedMatrixFactorization():
                n_latents:int=100, 
                n_iter:int=20, 
                w_obs:float=1.0, 
-               w_unobs:float=0.1,
+               w_unobs:float=0.05,
                lambda_reg:float=0.05) -> None:
     
     # all NaNs in the feedback matrix are replaced with 0:
@@ -80,22 +81,26 @@ class WeightedMatrixFactorization():
     self.items_embedding = np.random.rand(self.n_items, self.n_latents) # shape: (n_items x n_latents)
 
     print(f"* Fitting the model with {method} method: n_iter = {self.n_iter}, n_latents = {self.n_latents}, lambda_reg = {self.lambda_reg} *")
-
+    # take the time before fitting the model:
+    start_time = time.time()
     hist = {}     # history of loss function values
+
     match method: # select the method to use for fitting the model
       case 'wals':
         hist = self.__wals_method() 
+
+      case 'sgd':
+        hist = self.__sgd_method()
+
       case _:
         raise NotImplementedError(f"Method {method} not implemented.")
 
+    print(f"\n-> Model fitting completed in {time.time()-start_time:.2f} seconds")
+
     if dump:
-      # dump the model to disk:
-      timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-
       # save the filename with method and params used:
-      filename = f"wmf_{method}_nlat{self.n_latents}_niter{self.n_iter}_lambdareg{self.lambda_reg}_{timestamp}.pkl"
+      filename = f"wmf_{method}_nlat{self.n_latents}_niter{self.n_iter}_lambdareg{self.lambda_reg}.pkl"
 
-      #filename = f"wmf_{method}_{timestamp}.pkl"
       self.__save(MODELS_PATH + filename)
       print(f"\n-> Model saved to {MODELS_PATH + filename}")
 
@@ -121,12 +126,12 @@ class WeightedMatrixFactorization():
     history = {}
 
     with tqdm(total=self.n_iter) as pbar:
+
       for i in range(self.n_iter):  # iterate over the number of iterations
 
         with ThreadPoolExecutor() as executor: # ** parallelize the updates of user and item embeddings **
           executor.submit(self.__update_users_embedding)
           executor.submit(self.__update_items_embedding)
-
 
         loss = np.sum(  # compute the loss function value at iteration i
           np.where(
@@ -152,14 +157,18 @@ class WeightedMatrixFactorization():
     - history (dict): A dictionary containing the history of loss function values for each iteration.
     """
     history = {}
+    self.learning_rate = 0.01  # learning rate for SGD
 
     for epoch in range(self.n_iter):  # iterate over the number of epochs
       total_loss = 0
 
       for i in range(self.n_users):
         for j in range(self.n_items):
-          if self.feedbacks[i, j] > 0:  # check if rating is observed
-            error = self.feedbacks[i, j] - np.dot(self.users_embedding[i, :], self.items_embedding[j, :].T)
+
+          if self.feedbacks[i, j] > 0:  # check if the rating is observed
+
+            dot_product = np.dot(self.users_embedding[i, :], self.items_embedding[j, :].T)
+            error = self.feedbacks[i, j] - dot_product
             total_loss += error ** 2  # compute total loss
 
             # Update user and item embeddings using stochastic gradient descent
@@ -168,6 +177,7 @@ class WeightedMatrixFactorization():
 
             self.users_embedding[i, :] -= self.learning_rate * user_gradient
             self.items_embedding[j, :] -= self.learning_rate * item_gradient
+            print(f"Epoch {epoch+1}/{self.n_iter}, User {i+1}/{self.n_users}, Item {j+1}/{self.n_items}, Loss: {total_loss:.2f}", end='\r')
 
       # Save total loss for current epoch in history
       history[epoch] = total_loss
@@ -280,47 +290,6 @@ class WeightedMatrixFactorization():
     >>> predicted_ratings = model.predict()
     """
     return self.users_embedding @ self.items_embedding.T
-
-  def grid_search(self, params:dict, method:str='wals', seed:int=None, dump:bool=True) -> tuple:
-    """
-    Perform grid search over the specified hyperparameters and return the best combination of hyperparameters
-    and the corresponding history of loss function values during training.
-
-    Parameters:
-    - params (dict): A dictionary containing the hyperparameters to search over.
-    - method (str): The method to use for fitting the model. Currently supported method is 'wals'.
-    - seed (int): An optional seed value to set for reproducibility.
-    - dump (bool): A flag to indicate whether to save the model and its history to disk. Default is True.
-
-    Returns:
-    - best_params (dict): The best combination of hyperparameters.
-    - best_hist (dict): A dictionary containing the history of loss function values for the best combination of hyperparameters.
-
-    Usage:
-    >>> best_params, best_hist = model.grid_search(params={'n_latents':[50, 100, 150], 'n_iter':[10, 20, 30], 'lambda_reg':[0.01, 0.05, 0.1]})
-    """
-
-    best_params = None
-    best_hist = None
-    best_loss = np.inf
-
-    for n_latents in params['n_latents']:
-      for n_iter in params['n_iter']:
-        for lambda_reg in params['lambda_reg']:
-
-          self.n_latents = n_latents
-          self.n_iter = n_iter
-          self.lambda_reg = lambda_reg
-
-          hist = self.fit(method=method, seed=seed, dump=dump)
-          loss = hist[self.n_iter-1]  # get the loss value at the last iteration
-
-          if loss < best_loss:
-            best_loss = loss
-            best_params = {'n_latents':n_latents, 'n_iter':n_iter, 'lambda_reg':lambda_reg}
-            best_hist = hist
-
-    return best_params, best_hist
 
   def __save(self, filename:str) -> None:
     """
