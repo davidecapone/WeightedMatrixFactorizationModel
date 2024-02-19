@@ -117,23 +117,22 @@ class WeightedMatrixFactorization():
     """
     Perform Weighted Alternating Least Squares (WALS) algorithm.
 
-    This method iterates over the specified number of iterations, updating user and item embeddings
-    alternatively, and computes the loss function value at each iteration.
+    This method iterates over the specified number of iterations, updating user and item embeddings alternatively, 
+    and computes the loss function value at each iteration.
 
     Returns:
     - history (dict): A dictionary containing the loss function values for each iteration.
     """
+
     history = {}
-
-    with tqdm(total=self.n_iter) as pbar:
-
+    with tqdm(total=self.n_iter) as pbar: # only for progress bar
       for i in range(self.n_iter):  # iterate over the number of iterations
 
-        with ThreadPoolExecutor() as executor: # ** parallelize the updates of user and item embeddings **
+        with ThreadPoolExecutor() as executor: # ! parallelising the updates of user and item embeddings !
           executor.submit(self.__update_users_embedding)
           executor.submit(self.__update_items_embedding)
 
-        loss = np.sum(  # compute the loss function value at iteration i
+        loss = np.sum(  # loss function value at iteration i
           np.where(
               self.observed_data, # apply the formula only to observed ratings
               (self.feedbacks - self.users_embedding @ self.items_embedding.T) ** 2,
@@ -146,50 +145,13 @@ class WeightedMatrixFactorization():
         pbar.update(1)
 
     return history
-
-  def __sgd_method(self):
-    """
-    Perform Stochastic Gradient Descent (SGD) algorithm.
-
-    This method updates the user and item embeddings iteratively using stochastic gradient descent.
-
-    Returns:
-    - history (dict): A dictionary containing the history of loss function values for each iteration.
-    """
-    history = {}
-    self.learning_rate = 0.01  # learning rate for SGD
-
-    for epoch in range(self.n_iter):  # iterate over the number of epochs
-      total_loss = 0
-
-      for i in range(self.n_users):
-        for j in range(self.n_items):
-
-          if self.feedbacks[i, j] > 0:  # check if the rating is observed
-
-            dot_product = np.dot(self.users_embedding[i, :], self.items_embedding[j, :].T)
-            error = self.feedbacks[i, j] - dot_product
-            total_loss += error ** 2  # compute total loss
-
-            # Update user and item embeddings using stochastic gradient descent
-            user_gradient = -2 * error * self.items_embedding[j, :] + 2 * self.lambda_reg * self.users_embedding[i, :]
-            item_gradient = -2 * error * self.users_embedding[i, :] + 2 * self.lambda_reg * self.items_embedding[j, :]
-
-            self.users_embedding[i, :] -= self.learning_rate * user_gradient
-            self.items_embedding[j, :] -= self.learning_rate * item_gradient
-            print(f"Epoch {epoch+1}/{self.n_iter}, User {i+1}/{self.n_users}, Item {j+1}/{self.n_items}, Loss: {total_loss:.2f}", end='\r')
-
-      # Save total loss for current epoch in history
-      history[epoch] = total_loss
-
-    return history
   
   def __update_users_embedding(self) -> None:
     """
-    Update the user matrix based on the observed data, weights, and regularization.
+    Update the user matrix based on the observed data, weights.
 
     This method iteratively updates the user embeddings using the observed feedback data,
-    weights for observed and unobserved values, and regularization.
+    weights for observed and unobserved values.
 
     Returns:
     - None
@@ -227,10 +189,10 @@ class WeightedMatrixFactorization():
   
   def __update_items_embedding(self) -> None:
     """
-    Update the item matrix based on the observed data, weights, and regularization.
+    Update the item matrix based on the observed data, weights.
 
     This method iteratively updates the item embeddings using the observed feedback data,
-    weights for observed and unobserved values, and regularization.
+    weights for observed and unobserved values.
 
     Returns:
     - None
@@ -265,6 +227,42 @@ class WeightedMatrixFactorization():
         and b = users_embedding.T @ weight_matrix @ feedbacks[:, item_idx] (shape: n_latents x 1)
       '''
     return
+  
+  def __sgd_method(self):
+    """
+    Perform Stochastic Gradient Descent (SGD) algorithm.
+    This method updates the user and item embeddings iteratively using stochastic gradient descent.
+    
+    Returns:
+    - history (dict): A dictionary containing the history of loss function values for each iteration.
+    """
+    history = {}
+    self.learning_rate = 0.01  # learning rate for SGD
+
+    for epoch in range(self.n_iter):  # iterate over the number of epochs
+      total_loss = 0
+
+      for i in range(self.n_users):
+        for j in range(self.n_items):
+
+          if self.feedbacks[i, j] > 0:  # check if the rating is observed
+
+            dot_product = np.dot(self.users_embedding[i, :], self.items_embedding[j, :].T)
+            error = self.feedbacks[i, j] - dot_product
+            total_loss += error ** 2  # compute total loss
+
+            # Update user and item embeddings using stochastic gradient descent
+            user_gradient = -2 * error * self.items_embedding[j, :] + 2 * self.lambda_reg * self.users_embedding[i, :]
+            item_gradient = -2 * error * self.users_embedding[i, :] + 2 * self.lambda_reg * self.items_embedding[j, :]
+
+            self.users_embedding[i, :] -= self.learning_rate * user_gradient
+            self.items_embedding[j, :] -= self.learning_rate * item_gradient
+            print(f"Epoch {epoch+1}/{self.n_iter}, User {i+1}/{self.n_users}, Item {j+1}/{self.n_items}, Loss: {total_loss:.2f}", end='\r')
+
+      # Save total loss for current epoch in history
+      history[epoch] = total_loss
+
+    return history
   
   def get_embeddings(self) -> tuple:
     """
