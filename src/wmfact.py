@@ -309,14 +309,6 @@ class WeightedMatrixFactorization():
     with open(filename, 'wb') as file:
       dill.dump(self, file)
 
-    """"
-    try:
-      with open(filename, 'wb') as file:
-        pickle.dump(self, file, pickle.HIGHEST_PROTOCOL)
-    except Exception as e:
-      print(f"!! Error saving the model: {e} !!")
-    """
-
   @staticmethod
   def load(filename:str):
     """
