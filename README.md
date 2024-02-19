@@ -15,24 +15,32 @@ Let's consider a scenario with m users and items. Our objective with the recomme
 
 Here's an example of a feedback matrix for a recommendation system with 3 users and 4 items (movies), where missing ratings are represented by '?' symbols:
 
-         | Item 1 | Item 2 | Item 3 | Item 4 |
-----------------------------------------------
-User 1   |   5    |   ?    |   4    |   3    |
-User 2   |   ?    |   2    |   ?    |   ?    |
-User 3   |   4    |   3    |   ?    |   5    |
+|         | Item 1 | Item 2 | Item 3 | Item 4 |
+|---------|--------|--------|--------|--------|
+| User 1  |   5    |   ?    |   4    |   3    |
+| User 2  |   ?    |   2    |   ?    |   ?    |
+| User 3  |   4    |   3    |   ?    |   5    |
 
 
-The goal of the algorithm is to predict or infer the missing ratings for each user-item pair marked with '?'.
 
+The goal of the Recommender system is to predict the missing ratings for each user-item pair marked with '?'.
+
+This problem can be seen as a minimisation task, where our **loss function** is defined as:
 $$
 \min_{p,q}{\sum_{(i,j) \in obs}{(A_{ij}-U_i\dot{V_j^{T}})^2+\lambda(||U_i||^2+||V_j||^2)}}
 $$
 where $obs$ is the set of $(i,j)$ pairs which are known (the observed ratings). In order to avoid overfitting we use the $\lambda$ for regularize the parameters.
 
-To solve this minimization task, two common optimization algorithms are suggested:
+```math
+\min_{p,q}{\sum_{(i,j) \in obs}{(A_{ij}-U_i\dot{V_j^{T}})^2+\lambda(||U_i||^2+||V_j||^2)}}
+```
+
+
+To solve this minimization task, two common optimization algorithms can be used:
 - Stochastic Gradient Descent (SGD): A popular optimization algorithm that iteratively updates the parameters (user and item vectors) in the direction of the negative gradient of the objective function.
 - Weighted Alternating Least Squares (WALS): An optimization algorithm that alternates between updating the user and item matrices while keeping the other fixed. This method can also be parallelized as updates for different users/items can be performed independently.
 
+In this project are implemented both of them, 
 
 ## References
 - dw
