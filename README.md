@@ -1,4 +1,6 @@
 # WeightedMatrixFactorization Model for Recommender Systems
+This repository aims to build a real Recommender System by using a *Weighted Matrix Factorization* model.
+
 
 ## About data
 The MovieLens dataset is a widely used benchmark dataset for recommendation systems research and evaluation. It contains user-item ratings collected from the MovieLens website, where users rate movies on a scale of 1 to 5.
