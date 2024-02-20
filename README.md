@@ -5,11 +5,6 @@ The MovieLens dataset is a widely used benchmark dataset for recommendation syst
 
 For this project, it has been decided to use the MovieLens 100k: the smallest version of the dataset containing 100000 ratings. This version is commonly used for initial experimentation and prototyping due to its smaller size and faster processing capabilities.
 
-## Recommender systems
-Recommender systems can be broadly categorized into two types:
-- **Content-Based**: these systems aim to recommend items to users by analyzing the content of the items and users' profiles. They match users with items based on similarities in item content and user preferences.
-- **Collaborative filtering**: this approach relies on the principle that users who have similar preferences in the past are likely to have similar preferences in the future. Collaborative filtering algorithms recommend items to users based on the preferences of similar users. 
-
 ## Matrix Factorization Model
 Let's consider a scenario with m users and items. Our objective with the recommendation system is to construct an m×n matrix, commonly known as the feedback matrix. This matrix represents ratings for each user-item pair. Note that, due to the limited number of available ratings, this matrix is very sparse.
 
@@ -46,3 +41,7 @@ To tackle this minimization problem, two common optimization algorithms can be u
 - *Weighted Alternating Least Squares* (*WALS*): An optimization algorithm that alternates between updating the user and item matrices while keeping the other fixed. This method can also be parallelized as updates for different users/items can be performed independently.
 
 Both of these optimization techniques are implemented in this project.
+
+## Building a recommender system
+Once the weighted matrix factorization model has learned thw two matrices *U* and *V* (the users embedding and the items embdedding), we can build our recommendation system. 
+
