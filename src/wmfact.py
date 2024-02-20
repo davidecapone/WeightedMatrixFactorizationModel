@@ -1,15 +1,6 @@
 """
-This class implements the Weighted Matrix Factorization model using the Weighted Alternating Least Squares (WALS) algorithm. 
+This class implements the Weighted Matrix Factorization model.
 It provides functionalities for fitting the model, predicting ratings, and retrieving user and item embeddings.
-
-It learns low-dimensional representations (embeddings) of users and items from observed ratings, 
-and predicts ratings for user-item pairs based on these embeddings.
-
-Usage:
->>> model = WeightedMatrixFactorization(feedbacks, n_latents=100, n_iter=20, lambda_reg=0.05)
->>> hist = model.fit(method='wals')
->>> user_emb, item_emb = model.get_embeddings()
->>> predicted_ratings = model.predict()
 """
 
 import numpy as np
@@ -59,7 +50,7 @@ class WeightedMatrixFactorization():
     during training. The model and its history are saved to disk.
 
     Parameters:
-    - method (str): The method to use for fitting the model. Currently supported method is 'wals'.
+    - method (str): The method to use for fitting the model.
     - seed (int): An optional seed value to set for reproducibility.
     - dump (bool): A flag to indicate whether to save the model and its history to disk. Default is True.
 
@@ -107,7 +98,7 @@ class WeightedMatrixFactorization():
       # dump the history to disk:
       with open(MODELS_PATH + filename.replace('.pkl', '.json'), 'w') as file:
         json.dump(hist, file)
-      #hist.to_csv(MODELS_PATH + filename.replace('.pkl', '.csv'), index=False)
+
       print(f"-> History saved to {MODELS_PATH + filename.replace('.pkl', '.csv')}\n")
     
 
