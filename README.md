@@ -44,6 +44,3 @@ To tackle this minimization problem, two common optimization algorithms can be u
 
 Both of these optimization techniques are implemented in this project.
 
-## Building a recommender system
-Once the weighted matrix factorization model has learned thw two matrices *U* and *V* (the users embedding and the items embdedding), we can build our recommendation system. 
-
