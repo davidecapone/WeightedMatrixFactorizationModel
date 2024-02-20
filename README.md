@@ -25,7 +25,7 @@ By thinking of the feedback matrix as the product of two low-rank matrices, each
 Our objective function is defined as follows:
 
 ```math
-\min_{p,q}{\sum_{(i,j) \in obs}{(A_{ij}-U_i\dot{V_j^{T}})^2+\lambda(||U_i||^2+||V_j||^2)}}
+\min_{U,V}{\sum_{(i,j) \in obs}{(A_{ij}-U_i\dot{V_j^{T}})^2+\lambda(||U_i||^2+||V_j||^2)}}
 ```
 
 In this equation:
