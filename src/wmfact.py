@@ -19,7 +19,7 @@ class WeightedMatrixFactorization():
 
   def __init__(self, feedbacks:np.ndarray, 
                n_latents:int=100, 
-               n_iter:int=20, 
+               n_iter:int=15, 
                w_obs:float=1.0, 
                w_unobs:float=0.05,
                lambda_reg:float=0.05) -> None:
@@ -299,7 +299,7 @@ class WeightedMatrixFactorization():
       dill.dump(self, file)
 
   @staticmethod
-  def load(filename:str):
+  def load(filename:str) -> 'WeightedMatrixFactorization':
     """
     Load a model from a file using pickle.
 
